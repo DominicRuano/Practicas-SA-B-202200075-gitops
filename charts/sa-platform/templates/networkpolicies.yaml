@@ -1,0 +1,216 @@
+{{- if .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicies.dnsNamespace | default "kube-system" | quote }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.networkPolicies.dnsPodLabels }}
+              {{ $key }}: {{ $value | quote }}
+              {{- end }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: node-local-dns
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-ingress-and-egress
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  policyTypes: [Ingress, Egress]
+  ingress:
+    {{- if .Values.networkPolicies.publicGateway }}
+    - ports:
+        - {protocol: TCP, port: 8080}
+    {{- end }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ required "networkPolicies.ingressNamespace es obligatorio" .Values.networkPolicies.ingressNamespace | quote }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.networkPolicies.ingressPodLabels }}
+              {{ $key }}: {{ $value | quote }}
+              {{- end }}
+      ports:
+        - {protocol: TCP, port: 8080}
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: autenticacion}}
+      ports: [{protocol: TCP, port: 3000}]
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: solicitudes}}
+      ports: [{protocol: TCP, port: 3001}]
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: catalogo}}
+      ports: [{protocol: TCP, port: 8000}]
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: reportes}}
+      ports: [{protocol: TCP, port: 8001}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: autenticacion-flows
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: autenticacion}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app.kubernetes.io/name: gateway}}}]
+      ports: [{protocol: TCP, port: 3000}]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}}]
+      ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: solicitudes-flows
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: solicitudes}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app.kubernetes.io/name: gateway}}}]
+      ports: [{protocol: TCP, port: 3001}]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}}]
+      ports: [{protocol: TCP, port: 5432}]
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: rabbitmq}}}]
+      ports: [{protocol: TCP, port: 5672}]
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: catalogo}}}]
+      ports: [{protocol: TCP, port: 8000}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: catalogo-flows
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: catalogo}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: gateway}}
+        - podSelector: {matchLabels: {app.kubernetes.io/name: solicitudes}}
+      ports: [{protocol: TCP, port: 8000}]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}}]
+      ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: reportes-flows
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: reportes}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app.kubernetes.io/name: gateway}}}]
+      ports: [{protocol: TCP, port: 8001}]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}}]
+      ports: [{protocol: TCP, port: 5432}]
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: rabbitmq}}}]
+      ports: [{protocol: TCP, port: 5672}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgresql-authorized-clients
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: autenticacion}}
+        - podSelector: {matchLabels: {app.kubernetes.io/name: solicitudes}}
+        - podSelector: {matchLabels: {app.kubernetes.io/name: catalogo}}
+        - podSelector: {matchLabels: {app.kubernetes.io/name: reportes}}
+        - podSelector: {matchLabels: {app.kubernetes.io/component: cronjob}}
+      ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-authorized-clients
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: rabbitmq}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: solicitudes}}
+        - podSelector: {matchLabels: {app.kubernetes.io/name: reportes}}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ printf "%s-publicar-resumen" (include "sa-platform.fullname" .) | trunc 63 | trimSuffix "-" | quote }}
+      ports: [{protocol: TCP, port: 5672}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cron-registrar-egress
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ printf "%s-registrar-ejecucion" (include "sa-platform.fullname" .) | trunc 63 | trimSuffix "-" | quote }}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}}]
+      ports: [{protocol: TCP, port: 5432}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cron-publicar-egress
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ printf "%s-publicar-resumen" (include "sa-platform.fullname" .) | trunc 63 | trimSuffix "-" | quote }}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: postgresql}}}]
+      ports: [{protocol: TCP, port: 5432}]
+    - to: [{podSelector: {matchLabels: {app.kubernetes.io/name: rabbitmq}}}]
+      ports: [{protocol: TCP, port: 5672}]
+{{- end }}

@@ -1,0 +1,80 @@
+{{- if .Values.policies.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: sa-p8-disallow-latest
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  background: true
+  rules:
+    - name: require-versioned-images
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [{{ .Release.Namespace | quote }}]
+      validate:
+        failureAction: {{ .Values.policies.failureAction }}
+        message: Las imagenes deben utilizar una etiqueta versionada.
+        pattern:
+          spec:
+            containers:
+              - image: >-
+                  !*:latest
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: sa-p8-require-resources
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  background: true
+  rules:
+    - name: require-requests-and-limits
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [{{ .Release.Namespace | quote }}]
+      validate:
+        failureAction: {{ .Values.policies.failureAction }}
+        message: Cada contenedor debe declarar solicitudes y limites de CPU y memoria.
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    cpu: "?*"
+                    memory: "?*"
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: sa-p8-require-non-root
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  background: true
+  rules:
+    - name: require-non-root
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [{{ .Release.Namespace | quote }}]
+      validate:
+        failureAction: {{ .Values.policies.failureAction }}
+        message: Los pods deben ejecutarse como usuarios sin privilegios.
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+            containers:
+              - securityContext:
+                  allowPrivilegeEscalation: false
+{{- end }}

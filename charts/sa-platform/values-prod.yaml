@@ -1,0 +1,55 @@
+global:
+  applicationImageTag: "0.0.0"
+
+externalSecret:
+  enabled: true
+
+autenticacion:
+  replicaCount: 3
+  config:
+    LOG_LEVEL: warn
+    COOKIE_SECURE: "true"
+    WEB_ORIGIN: https://sa-p8.example.com
+  autoscaling: {minReplicas: 3}
+  resources:
+    requests: {cpu: 200m, memory: 192Mi}
+    limits: {cpu: "1", memory: 512Mi}
+solicitudes:
+  replicaCount: 3
+  config: {LOG_LEVEL: warn}
+  autoscaling: {minReplicas: 3}
+  resources:
+    requests: {cpu: 200m, memory: 192Mi}
+    limits: {cpu: "1", memory: 512Mi}
+catalogo:
+  replicaCount: 3
+  config: {LOG_LEVEL: warn}
+  autoscaling: {minReplicas: 3}
+  resources:
+    requests: {cpu: 200m, memory: 192Mi}
+    limits: {cpu: "1", memory: 512Mi}
+reportes:
+  replicaCount: 3
+  config: {LOG_LEVEL: warn}
+  autoscaling: {minReplicas: 3}
+  resources:
+    requests: {cpu: 200m, memory: 192Mi}
+    limits: {cpu: "1", memory: 512Mi}
+gateway:
+  replicaCount: 3
+  config: {LOG_LEVEL: warn}
+  autoscaling: {minReplicas: 3}
+  ingress:
+    hosts:
+      - host: sa-p8.example.com
+        paths:
+          - {path: /, pathType: Prefix}
+    tls:
+      - secretName: sa-p8-tls
+        hosts:
+          - sa-p8.example.com
+  resources:
+    requests: {cpu: 100m, memory: 96Mi}
+    limits: {cpu: 500m, memory: 256Mi}
+cronJobs:
+  commonConfig: {LOG_LEVEL: warn}

@@ -1,0 +1,136 @@
+{{- if .Values.cronJobs.enabled }}
+{{- $root := . -}}
+{{- range $name, $job := .Values.cronJobs.jobs }}
+{{- $context := dict "root" $root "name" $name -}}
+{{- $fullName := include "sa-platform.cronJobName" $context -}}
+{{- $config := mergeOverwrite (deepCopy $root.Values.cronJobs.commonConfig) ($job.config | default dict) -}}
+{{- $suspend := $root.Values.cronJobs.suspend | default false -}}
+{{- if hasKey $job "suspend" -}}
+  {{- $suspend = or $suspend $job.suspend -}}
+{{- end -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-config" $fullName | quote }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.cronLabels" (dict "root" $root "name" $fullName) | nindent 4 }}
+data:
+  {{- range $key, $value := $config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $fullName | quote }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.cronLabels" (dict "root" $root "name" $fullName) | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullName | quote }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" $root | nindent 4 }}
+rules: []
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullName | quote }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" $root | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $fullName | quote }}
+    namespace: {{ $root.Release.Namespace | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullName | quote }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fullName | quote }}
+  namespace: {{ $root.Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.cronLabels" (dict "root" $root "name" $fullName) | nindent 4 }}
+spec:
+  schedule: {{ required (printf "cronJobs.jobs.%s.schedule es obligatorio" $name) $job.schedule | quote }}
+  timeZone: {{ $root.Values.cronJobs.timeZone | default "America/Guatemala" | quote }}
+  concurrencyPolicy: {{ $root.Values.cronJobs.concurrencyPolicy | default "Forbid" | quote }}
+  suspend: {{ $suspend }}
+  startingDeadlineSeconds: {{ $root.Values.cronJobs.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ $root.Values.cronJobs.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ $root.Values.cronJobs.failedJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $fullName | quote }}
+        app.kubernetes.io/instance: {{ $root.Release.Name | quote }}
+        app.kubernetes.io/component: cronjob
+    spec:
+      backoffLimit: {{ $root.Values.cronJobs.backoffLimit }}
+      ttlSecondsAfterFinished: {{ $root.Values.cronJobs.ttlSecondsAfterFinished }}
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: {{ $fullName | quote }}
+            app.kubernetes.io/instance: {{ $root.Release.Name | quote }}
+            app.kubernetes.io/component: cronjob
+          annotations:
+            checksum/config: {{ toJson $config | sha256sum | quote }}
+            checksum/secret-inputs: {{ printf "%s:%s:%s" (include "sa-platform.secretName" $root) ($root.Values.global.secret.revision | default "1") (toJson ($root.Values.global.secret.values | default dict) | sha256sum) | sha256sum | quote }}
+        spec:
+          serviceAccountName: {{ $fullName | quote }}
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: {{ $name | quote }}
+              image: {{ printf "%s%s:%s" (ternary (printf "%s/" ($root.Values.global.applicationImageRegistry | default $root.Values.cronJobs.image.registry)) "" (ne ($root.Values.global.applicationImageRegistry | default $root.Values.cronJobs.image.registry | default "") "")) (required "cronJobs.image.repository es obligatorio" $root.Values.cronJobs.image.repository) ($root.Values.global.applicationImageTag | default $root.Values.cronJobs.image.tag | default $root.Chart.AppVersion) | quote }}
+              imagePullPolicy: {{ $root.Values.cronJobs.image.pullPolicy | default "IfNotPresent" }}
+              command:
+                {{- range $argument := $job.command }}
+                - {{ $argument | quote }}
+                {{- end }}
+              envFrom:
+                - configMapRef:
+                    name: {{ printf "%s-config" $fullName | quote }}
+              env:
+                {{- range $envName, $secretKey := $job.secretKeys }}
+                - name: {{ $envName | quote }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "sa-platform.secretName" $root | quote }}
+                      key: {{ $secretKey | quote }}
+                {{- end }}
+              resources:
+                {{- toYaml $root.Values.cronJobs.resources | nindent 16 }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir:
+                sizeLimit: 64Mi
+{{ end }}
+{{- end }}

@@ -1,0 +1,374 @@
+global:
+  imageRegistry: ""
+  applicationImageRegistry: ghcr.io/dominicruano/sa-p8
+  applicationImageTag: "1.0.0"
+  imagePullSecrets: []
+  defaultStorageClass: ""
+  storageClass: ""
+  security:
+    # Los tags versionados de los charts comunitarios de Bitnami fueron
+    # archivados en bitnamilegacy; se fijan para que el laboratorio sea repetible.
+    allowInsecureImages: true
+  secret:
+    name: sa-platform-secrets
+    revision: "1"
+
+externalSecret:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: gcp-secret-manager
+  remoteKeys:
+    postgresAdminPassword: sa-p8-postgres-admin-password
+    postgresApplicationPassword: sa-p8-postgres-application-password
+    rabbitmqPassword: sa-p8-rabbitmq-password
+    rabbitmqErlangCookie: sa-p8-rabbitmq-erlang-cookie
+    jwtSecretBase64: sa-p8-jwt-secret-base64
+    dataEncryptionKeyBase64: sa-p8-data-encryption-key-base64
+    emailIndexKeyBase64: sa-p8-email-index-key-base64
+
+secretStore:
+  enabled: true
+  name: gcp-secret-manager
+  projectID: ""
+  serviceAccountRef:
+    name: sa-p8-secrets
+    namespace: sa-p8
+
+policies:
+  enabled: true
+  failureAction: Enforce
+
+networkPolicies:
+  enabled: true
+  publicGateway: false
+  ingressNamespace: ingress-nginx
+  ingressPodLabels:
+    app.kubernetes.io/name: ingress-nginx
+  dnsNamespace: kube-system
+  dnsPodLabels:
+    k8s-app: kube-dns
+
+cronJobs:
+  enabled: true
+  # Pausa la programacion sin eliminar los CronJobs. Cada entrada bajo jobs
+  # puede sobrescribir este valor con su propia clave suspend.
+  suspend: false
+  image:
+    registry: ghcr.io/dominicruano/sa-p8
+    repository: jobs
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  timeZone: America/Guatemala
+  commonConfig:
+    CARNE: "202200075"
+    TZ: America/Guatemala
+    LOG_LEVEL: info
+    RABBITMQ_EXCHANGE: sa.events
+  jobs:
+    registrar-ejecucion:
+      schedule: "*/2 * * * *"
+      command:
+        - python
+        - -m
+        - jobs.registrar_ejecucion
+      secretKeys:
+        DATABASE_URL: OPERACIONES_DATABASE_URL
+    publicar-resumen:
+      schedule: "*/10 * * * *"
+      command:
+        - python
+        - -m
+        - jobs.publicar_resumen
+      secretKeys:
+        DATABASE_URL: OPERACIONES_DATABASE_URL
+        RABBITMQ_URL: RABBITMQ_URL
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 60
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  resources:
+    requests:
+      cpu: 25m
+      memory: 48Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+autenticacion:
+  enabled: true
+  fullnameOverride: autenticacion
+  replicaCount: 2
+  minReadySeconds: 5
+  terminationGracePeriodSeconds: 30
+  lifecycle:
+    preStop: {enabled: true, sleepSeconds: 5}
+  image:
+    registry: ghcr.io/dominicruano/sa-p8
+    repository: autenticacion
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  config:
+    NODE_ENV: production
+    API_PORT: "3000"
+    WEB_ORIGIN: http://sa-p8.local
+    DB_SSL: "false"
+    JWT_ACCESS_TTL_SECONDS: "3600"
+    JWT_RENEWAL_GRACE_SECONDS: "86400"
+    JWT_ISSUER: practica-8-autenticacion
+    JWT_AUDIENCE: practica-8-gateway
+    COOKIE_SECURE: "false"
+    LOG_LEVEL: info
+  secretEnv:
+    DATABASE_URL: AUTH_DATABASE_URL
+    JWT_SECRET_BASE64: JWT_SECRET_BASE64
+    DATA_ENCRYPTION_KEY_BASE64: DATA_ENCRYPTION_KEY_BASE64
+    EMAIL_INDEX_KEY_BASE64: EMAIL_INDEX_KEY_BASE64
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+solicitudes:
+  enabled: true
+  fullnameOverride: solicitudes
+  replicaCount: 2
+  minReadySeconds: 5
+  terminationGracePeriodSeconds: 30
+  lifecycle:
+    preStop: {enabled: true, sleepSeconds: 5}
+  image:
+    registry: ghcr.io/dominicruano/sa-p8
+    repository: solicitudes
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  config:
+    NODE_ENV: production
+    PORT: "3001"
+    DB_SSL: "false"
+    CATALOGO_URL: http://catalogo:8000/api/v1/catalogo/graphql
+    CATALOGO_TIMEOUT_MS: "3000"
+    RABBITMQ_EXCHANGE: sa.events
+    OUTBOX_POLL_MS: "1000"
+    LOG_LEVEL: info
+  secretEnv:
+    DATABASE_URL: SOLICITUDES_DATABASE_URL
+    RABBITMQ_URL: RABBITMQ_URL
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+catalogo:
+  enabled: true
+  fullnameOverride: catalogo
+  replicaCount: 2
+  minReadySeconds: 5
+  terminationGracePeriodSeconds: 30
+  lifecycle:
+    preStop: {enabled: true, sleepSeconds: 5}
+  image:
+    registry: ghcr.io/dominicruano/sa-p8
+    repository: catalogo
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  config:
+    LOG_LEVEL: info
+  secretEnv:
+    DATABASE_URL: CATALOGO_DATABASE_URL
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+reportes:
+  enabled: true
+  fullnameOverride: reportes
+  replicaCount: 2
+  minReadySeconds: 5
+  terminationGracePeriodSeconds: 30
+  lifecycle:
+    preStop: {enabled: true, sleepSeconds: 5}
+  image:
+    registry: ghcr.io/dominicruano/sa-p8
+    repository: reportes
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  config:
+    RABBITMQ_EXCHANGE: sa.events
+    RABBITMQ_QUEUE: reportes.events
+    CONSUMER_ENABLED: "true"
+    LOG_LEVEL: info
+  secretEnv:
+    DATABASE_URL: REPORTES_DATABASE_URL
+    RABBITMQ_URL: RABBITMQ_URL
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+gateway:
+  enabled: true
+  fullnameOverride: gateway
+  replicaCount: 2
+  minReadySeconds: 5
+  terminationGracePeriodSeconds: 30
+  lifecycle:
+    preStop: {enabled: true, sleepSeconds: 5}
+  image:
+    registry: ghcr.io/dominicruano/sa-p8
+    repository: gateway
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  config:
+    LOG_LEVEL: info
+  upstreams:
+    autenticacion: {host: autenticacion, port: 3000}
+    solicitudes: {host: solicitudes, port: 3001}
+    catalogo: {host: catalogo, port: 8000}
+    reportes: {host: reportes, port: 8001}
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: ""
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 300m, memory: 192Mi}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+postgresql:
+  enabled: true
+  fullnameOverride: postgresql
+  architecture: standalone
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    tag: 17.6.0-debian-12-r4
+  auth:
+    enablePostgresUser: true
+    username: platform
+    database: autenticacion
+    existingSecret: sa-platform-secrets
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+      replicationPasswordKey: replication-password
+  primary:
+    pdb:
+      create: true
+      minAvailable: 1
+      maxUnavailable: ""
+    persistence:
+      enabled: true
+      size: 2Gi
+    initdb:
+      scripts:
+        00-create-platform-databases.sh: |
+          #!/bin/bash
+          set -euo pipefail
+
+          readonly admin_password_file="/opt/bitnami/postgresql/secrets/postgres-password"
+          if [[ ! -r "${admin_password_file}" ]]; then
+            echo "No se puede leer el password administrativo de PostgreSQL." >&2
+            exit 1
+          fi
+
+          export PGPASSWORD
+          PGPASSWORD="$(< "${admin_password_file}")"
+          readonly -a psql_args=(
+            --host 127.0.0.1
+            --port "${POSTGRESQL_PORT_NUMBER:-5432}"
+            --username postgres
+            --dbname postgres
+            --no-password
+            --set=ON_ERROR_STOP=1
+          )
+
+          for database in solicitudes catalogo reportes operaciones; do
+            exists="$(psql "${psql_args[@]}" --tuples-only --no-align \
+              --command "SELECT 1 FROM pg_database WHERE datname = '${database}'")"
+            if [[ "${exists}" == "1" ]]; then
+              echo "La base ${database} ya existe; se conserva."
+            else
+              psql "${psql_args[@]}" \
+                --command "CREATE DATABASE \"${database}\" OWNER platform"
+              echo "Base ${database} creada."
+            fi
+          done
+
+          unset PGPASSWORD
+    resources:
+      requests: {cpu: 150m, memory: 256Mi}
+      limits: {cpu: 750m, memory: 768Mi}
+    networkPolicy:
+      enabled: false
+  readReplicas:
+    networkPolicy:
+      enabled: false
+  metrics:
+    enabled: false
+
+rabbitmq:
+  enabled: true
+  fullnameOverride: rabbitmq
+  replicaCount: 1
+  automountServiceAccountToken: false
+  rbac:
+    create: false
+  pdb:
+    create: true
+    minAvailable: 1
+    maxUnavailable: ""
+  plugins: rabbitmq_management
+  extraPlugins: ""
+  clustering:
+    enabled: false
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/rabbitmq
+    tag: 4.1.3-debian-12-r1
+  auth:
+    username: platform
+    existingPasswordSecret: sa-platform-secrets
+    existingSecretPasswordKey: rabbitmq-password
+    existingErlangSecret: sa-platform-secrets
+    existingSecretErlangKey: rabbitmq-erlang-cookie
+  persistence:
+    enabled: true
+    size: 2Gi
+  resources:
+    requests: {cpu: 150m, memory: 256Mi}
+    limits: {cpu: 750m, memory: 768Mi}
+  networkPolicy:
+    enabled: false
+  metrics:
+    enabled: false

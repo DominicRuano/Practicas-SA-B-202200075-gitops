@@ -1,0 +1,4 @@
+Plataforma GitOps declarada en {{ .Release.Namespace }}.
+Argo CD administra la sincronizacion y Argo Rollouts controla las revisiones
+de los cinco servicios HTTP. Solo el Gateway puede publicarse; los demas
+Services permanecen como ClusterIP.

@@ -1,0 +1,43 @@
+global:
+  applicationImageTag: "1.0.0"
+
+externalSecret:
+  enabled: false
+
+autenticacion:
+  replicaCount: 2
+  config: {LOG_LEVEL: debug}
+  autoscaling: {minReplicas: 2}
+  resources:
+    requests: {cpu: 75m, memory: 96Mi}
+    limits: {cpu: 350m, memory: 256Mi}
+solicitudes:
+  replicaCount: 2
+  config: {LOG_LEVEL: debug}
+  autoscaling: {minReplicas: 2}
+  resources:
+    requests: {cpu: 75m, memory: 96Mi}
+    limits: {cpu: 350m, memory: 256Mi}
+catalogo:
+  replicaCount: 2
+  config: {LOG_LEVEL: debug}
+  autoscaling: {minReplicas: 2}
+  resources:
+    requests: {cpu: 75m, memory: 96Mi}
+    limits: {cpu: 350m, memory: 256Mi}
+reportes:
+  replicaCount: 2
+  config: {LOG_LEVEL: debug}
+  autoscaling: {minReplicas: 2}
+  resources:
+    requests: {cpu: 75m, memory: 96Mi}
+    limits: {cpu: 350m, memory: 256Mi}
+gateway:
+  replicaCount: 2
+  config: {LOG_LEVEL: debug}
+  autoscaling: {minReplicas: 2}
+  resources:
+    requests: {cpu: 40m, memory: 48Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+cronJobs:
+  commonConfig: {LOG_LEVEL: debug}
