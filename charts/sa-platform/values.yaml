@@ -1,7 +1,7 @@
 global:
   imageRegistry: ""
   applicationImageRegistry: ghcr.io/dominicruano/sa-p8
-  applicationImageTag: "1.0.0"
+  applicationImageTag: "1.1.0"
   imagePullSecrets: []
   defaultStorageClass: ""
   storageClass: ""
@@ -58,7 +58,7 @@ cronJobs:
   image:
     registry: ghcr.io/dominicruano/sa-p8
     repository: jobs
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   timeZone: America/Guatemala
   commonConfig:
@@ -109,7 +109,7 @@ autenticacion:
   image:
     registry: ghcr.io/dominicruano/sa-p8
     repository: autenticacion
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   config:
     NODE_ENV: production
@@ -121,6 +121,7 @@ autenticacion:
     JWT_ISSUER: practica-8-autenticacion
     JWT_AUDIENCE: practica-8-gateway
     COOKIE_SECURE: "false"
+    PROMOTION_STATUS: ready
     LOG_LEVEL: info
   secretEnv:
     DATABASE_URL: AUTH_DATABASE_URL
@@ -147,7 +148,7 @@ solicitudes:
   image:
     registry: ghcr.io/dominicruano/sa-p8
     repository: solicitudes
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   config:
     NODE_ENV: production
@@ -181,7 +182,7 @@ catalogo:
   image:
     registry: ghcr.io/dominicruano/sa-p8
     repository: catalogo
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   config:
     LOG_LEVEL: info
@@ -207,7 +208,7 @@ reportes:
   image:
     registry: ghcr.io/dominicruano/sa-p8
     repository: reportes
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   config:
     RABBITMQ_EXCHANGE: sa.events
@@ -237,7 +238,7 @@ gateway:
   image:
     registry: ghcr.io/dominicruano/sa-p8
     repository: gateway
-    tag: "1.0.0"
+    tag: "1.1.0"
     pullPolicy: IfNotPresent
   config:
     LOG_LEVEL: info

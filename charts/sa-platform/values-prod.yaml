@@ -1,5 +1,5 @@
 global:
-  applicationImageTag: "1.0.0"
+  applicationImageTag: "1.1.0"
 externalSecret:
   enabled: true
 
@@ -8,7 +8,8 @@ autenticacion:
   config:
     LOG_LEVEL: warn
     COOKIE_SECURE: "true"
-    WEB_ORIGIN: https://sa-p8.example.com
+    WEB_ORIGIN: http://127.0.0.1:8080
+    PROMOTION_STATUS: ready
   autoscaling: {minReplicas: 3}
   resources:
     requests: {cpu: 200m, memory: 192Mi}
@@ -39,14 +40,7 @@ gateway:
   config: {LOG_LEVEL: warn}
   autoscaling: {minReplicas: 3}
   ingress:
-    hosts:
-      - host: sa-p8.example.com
-        paths:
-          - {path: /, pathType: Prefix}
-    tls:
-      - secretName: sa-p8-tls
-        hosts:
-          - sa-p8.example.com
+    enabled: false
   resources:
     requests: {cpu: 100m, memory: 96Mi}
     limits: {cpu: 500m, memory: 256Mi}

@@ -43,6 +43,36 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: rollout-analysis-ingress
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "sa-platform.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [autenticacion, solicitudes, catalogo, reportes, gateway]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: argo-rollouts
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argo-rollouts
+              app.kubernetes.io/component: rollouts-controller
+      ports:
+        - {protocol: TCP, port: 3000}
+        - {protocol: TCP, port: 3001}
+        - {protocol: TCP, port: 8000}
+        - {protocol: TCP, port: 8001}
+        - {protocol: TCP, port: 8080}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: gateway-ingress-and-egress
   namespace: {{ .Release.Namespace | quote }}
   labels:
