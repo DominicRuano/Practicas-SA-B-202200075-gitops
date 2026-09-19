@@ -1,6 +1,5 @@
 global:
-  applicationImageTag: "0.0.0"
-
+  applicationImageTag: "1.0.0"
 externalSecret:
   enabled: true
 
