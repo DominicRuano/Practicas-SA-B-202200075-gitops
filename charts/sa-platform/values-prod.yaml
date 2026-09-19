@@ -9,7 +9,7 @@ autenticacion:
     LOG_LEVEL: warn
     COOKIE_SECURE: "true"
     WEB_ORIGIN: http://127.0.0.1:8080
-    PROMOTION_STATUS: ready
+    PROMOTION_STATUS: failed
   autoscaling: {minReplicas: 3}
   resources:
     requests: {cpu: 200m, memory: 192Mi}
