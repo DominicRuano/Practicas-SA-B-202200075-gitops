@@ -1,0 +1,33 @@
+name: P8 Release PR
+
+on:
+  push:
+    branches:
+      - "release/p8-v*"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pull-request:
+    name: Crear pull request de release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Crear pull request
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          version=${BRANCH#release/p8-v}
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || exit 1
+          if [[ "$(gh pr list --repo "$REPOSITORY" --base main --head "$BRANCH" --state open --json number --jq length)" == "0" ]]; then
+            gh pr create \
+              --repo "$REPOSITORY" \
+              --base main \
+              --head "$BRANCH" \
+              --title "Release p8-v$version" \
+              --body "Actualiza la version declarada de los componentes a $version."
+          fi
