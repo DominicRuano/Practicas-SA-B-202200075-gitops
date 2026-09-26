@@ -146,6 +146,7 @@ metadata:
     argocd.argoproj.io/sync-wave: '1'
 spec:
   schedule: '*/15 * * * *'
+  paused: false
   template:
     includedNamespaces: [sa-p9]
     excludedResources: [secrets]
