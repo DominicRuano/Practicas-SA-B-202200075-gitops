@@ -417,6 +417,18 @@ postgresql-ha:
       tag: 4.6.3-debian-12-r0
     replicaCount: 2
     existingSecret: sa-platform-secrets
+    numInitChildren: '24'
+    maxPool: '1'
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+    startupProbe:
+      enabled: true
+      periodSeconds: 5
+      timeoutSeconds: 5
+      failureThreshold: 60
     podAntiAffinityPreset: hard
     pdb:
       create: true
