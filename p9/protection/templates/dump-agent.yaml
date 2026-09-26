@@ -105,7 +105,9 @@ spec:
         - name: tmp
           emptyDir: {}
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: dumps
         labels: {app.kubernetes.io/name: p9-dump}
       spec:
