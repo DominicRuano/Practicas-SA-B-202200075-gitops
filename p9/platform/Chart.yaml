@@ -1,0 +1,45 @@
+apiVersion: v2
+name: sa-platform
+description: Microservicios P9 con recuperacion de datos y alta disponibilidad
+type: application
+icon: https://kubernetes.io/images/favicon.png
+version: 0.9.0
+appVersion: 1.1.0
+kubeVersion: '>=1.27.0-0'
+keywords:
+- kubernetes
+- microservices
+- practica-8
+- gitops
+- argo-rollouts
+maintainers:
+- name: 202200075
+dependencies:
+- name: autenticacion
+  version: 0.9.0
+  repository: file://../../charts/autenticacion
+  condition: autenticacion.enabled
+- name: solicitudes
+  version: 0.9.0
+  repository: file://../../charts/solicitudes
+  condition: solicitudes.enabled
+- name: catalogo
+  version: 0.9.0
+  repository: file://../../charts/catalogo
+  condition: catalogo.enabled
+- name: reportes
+  version: 0.9.0
+  repository: file://../../charts/reportes
+  condition: reportes.enabled
+- name: gateway
+  version: 0.9.0
+  repository: file://../../charts/gateway
+  condition: gateway.enabled
+- name: rabbitmq
+  version: 16.0.14
+  repository: oci://registry-1.docker.io/bitnamicharts
+  condition: rabbitmq.enabled
+- name: postgresql-ha
+  version: 16.3.4
+  repository: file://../../vendor/postgresql-ha
+  condition: postgresql-ha.enabled

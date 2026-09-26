@@ -1,0 +1,33 @@
+global:
+  imageRegistry: ''
+  applicationImageRegistry: ghcr.io/dominicruano/sa-p8
+  applicationImageTag: 1.1.0
+  imagePullSecrets: []
+  defaultStorageClass: ''
+  storageClass: ''
+  security:
+    allowInsecureImages: true
+  secret:
+    name: sa-platform-secrets
+    revision: '1'
+secretStore:
+  enabled: true
+  name: p9-gcp-secret-manager
+  projectID: elated-pathway-341621
+  serviceAccountRef:
+    name: sa-p9-secrets
+    namespace: sa-p9
+externalSecret:
+  enabled: true
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: p9-gcp-secret-manager
+  remoteKeys:
+    postgresAdminPassword: sa-p9-postgres-admin-password
+    postgresApplicationPassword: sa-p9-postgres-application-password
+    rabbitmqPassword: sa-p9-rabbitmq-password
+    rabbitmqErlangCookie: sa-p9-rabbitmq-erlang-cookie
+    jwtSecretBase64: sa-p9-jwt-secret-base64
+    dataEncryptionKeyBase64: sa-p9-data-encryption-key-base64
+    emailIndexKeyBase64: sa-p9-email-index-key-base64

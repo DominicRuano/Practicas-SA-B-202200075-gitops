@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: p9-probe-ingress
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: gateway}}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: p9-probe}}
+      ports: [{port: 8080, protocol: TCP}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: p9-probe-egress
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: p9-probe}}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: gateway}}
+      ports: [{port: 8080, protocol: TCP}]

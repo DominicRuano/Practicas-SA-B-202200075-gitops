@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: p9-database-replication
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql-ha
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: postgresql-ha}}
+        - podSelector: {matchLabels: {app.kubernetes.io/name: p9-dump}}
+      ports: [{port: 5432, protocol: TCP}]
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: postgresql-ha}}
+      ports: [{port: 5432, protocol: TCP}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: p9-rabbitmq-cluster
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: rabbitmq}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: rabbitmq}}
+      ports: [{port: 4369, protocol: TCP}, {port: 25672, protocol: TCP}]
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: rabbitmq}}
+      ports: [{port: 4369, protocol: TCP}, {port: 25672, protocol: TCP}]
+    - to: [{ipBlock: {cidr: 0.0.0.0/0}}]
+      ports: [{port: 443, protocol: TCP}]

@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: p9-dump
+  labels: {app.kubernetes.io/name: p9-dump}
+spec:
+  clusterIP: None
+  selector: {app.kubernetes.io/name: p9-dump}
+  ports: [{name: postgres, port: 5432}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: p9-dump-scripts
+  labels: {app.kubernetes.io/name: p9-dump}
+data:
+  backup.sh: |
+    #!/usr/bin/env bash
+    set -euo pipefail
+    umask 077
+
+    rm -rf /backup/pending.* /backup/previous
+    dump_directory=$(mktemp -d /backup/pending.XXXXXX)
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$dump_directory/started-at.txt"
+    trap 'rm -rf "$dump_directory"' EXIT
+
+    for database in autenticacion solicitudes catalogo reportes operaciones; do
+      pg_dump --no-password --format=custom --dbname="$database" \
+        --file="$dump_directory/$database.dump"
+    done
+
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$dump_directory/completed-at.txt"
+
+    if [[ -d /backup/current ]]; then
+      mv /backup/current /backup/previous
+    fi
+
+    mv "$dump_directory" /backup/current
+    rm -rf /backup/previous
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: p9-dump
+  labels: {app.kubernetes.io/name: p9-dump}
+spec:
+  serviceName: p9-dump
+  replicas: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: p9-dump}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: p9-dump}
+      annotations:
+        backup.velero.io/backup-volumes: dumps
+        pre.hook.backup.velero.io/container: postgres-client
+        pre.hook.backup.velero.io/command: '["/bin/bash", "/scripts/backup.sh"]'
+        pre.hook.backup.velero.io/on-error: Fail
+        pre.hook.backup.velero.io/timeout: 10m
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {app.kubernetes.io/name: p9-dump}
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: postgres-client
+          image: postgres:17.6-bookworm
+          command: [/bin/bash, -c, "exec sleep infinity"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          env:
+            - {name: PGHOST, value: postgresql-ha-pgpool.sa-p9.svc.cluster.local}
+            - {name: PGUSER, value: postgres}
+            - {name: PGCONNECT_TIMEOUT, value: "10"}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: {name: sa-platform-secrets, key: postgres-password}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          readinessProbe:
+            exec: {command: [/bin/bash, -c, "test -d /backup && test -r /scripts/backup.sh"]}
+            periodSeconds: 10
+          livenessProbe:
+            exec: {command: [/bin/bash, -c, "test -d /backup"]}
+            periodSeconds: 30
+          volumeMounts:
+            - {name: dumps, mountPath: /backup}
+            - {name: scripts, mountPath: /scripts, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: scripts
+          configMap: {name: p9-dump-scripts, defaultMode: 0555}
+        - name: tmp
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: dumps
+        labels: {app.kubernetes.io/name: p9-dump}
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: standard-rwo
+        resources:
+          requests: {storage: 2Gi}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: p9-dump
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: p9-dump}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: p9-dump-database
+spec:
+  podSelector: {matchLabels: {app.kubernetes.io/name: p9-dump}}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector: {matchLabels: {app.kubernetes.io/name: postgresql-ha}}
+      ports: [{port: 5432, protocol: TCP}]
+---
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: p9-quarter-hour
+  namespace: velero
+spec:
+  schedule: '*/15 * * * *'
+  template:
+    includedNamespaces: [sa-p9]
+    excludedResources: [secrets]
+    defaultVolumesToFsBackup: true
+    snapshotVolumes: false
+    ttl: 168h0m0s
+    storageLocation: default

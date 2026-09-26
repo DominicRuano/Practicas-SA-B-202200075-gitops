@@ -1,0 +1,6 @@
+apiVersion: v2
+description: Continuidad operativa P9
+icon: https://kubernetes.io/images/favicon.png
+name: p9-root
+type: application
+version: 0.9.0

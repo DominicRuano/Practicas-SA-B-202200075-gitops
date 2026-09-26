@@ -1,0 +1,105 @@
+repository: https://github.com/DominicRuano/Practicas-SA-B-202200075-gitops
+revision: main
+applications:
+- name: p9-argo-rollouts
+  wave: -40
+  namespace: argo-rollouts
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-rollouts
+    targetRevision: 2.43.1
+    helm:
+      valuesObject: {}
+- name: p9-kyverno
+  wave: -40
+  namespace: kyverno
+  source:
+    repoURL: https://kyverno.github.io/kyverno
+    chart: kyverno
+    targetRevision: 3.8.2
+    helm:
+      valuesObject:
+        test:
+          image:
+            tag: v1.18.2
+        webhooksCleanup:
+          image:
+            tag: v1.18.2
+- name: p9-external-secrets
+  wave: -40
+  namespace: external-secrets
+  source:
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    targetRevision: 2.10.0
+    helm:
+      valuesObject:
+        installCRDs: true
+- name: p9-velero
+  wave: -40
+  namespace: velero
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: 12.2.1
+    helm:
+      valuesObject:
+        image:
+          repository: velero/velero
+          tag: v1.18.2
+        initContainers:
+        - name: velero-plugin-for-gcp
+          image: velero/velero-plugin-for-gcp:v1.14.4
+          volumeMounts:
+          - mountPath: /target
+            name: plugins
+        credentials:
+          useSecret: false
+        serviceAccount:
+          server:
+            create: true
+            name: velero
+            annotations:
+              iam.gke.io/gcp-service-account: sa-p9-velero@elated-pathway-341621.iam.gserviceaccount.com
+        configuration:
+          backupStorageLocation:
+          - name: default
+            provider: gcp
+            bucket: elated-pathway-341621-sa-p9-backups
+            default: true
+            config:
+              serviceAccount: sa-p9-velero@elated-pathway-341621.iam.gserviceaccount.com
+          volumeSnapshotLocation: []
+          defaultVolumesToFsBackup: true
+          features: ''
+          backupSyncPeriod: 30s
+        snapshotsEnabled: false
+        deployNodeAgent: true
+        nodeAgent:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        upgradeCRDs: true
+- name: p9-config
+  wave: -20
+  namespace: sa-p9
+  path: p9/config
+- name: p9-platform
+  wave: 0
+  namespace: sa-p9
+  path: p9/platform
+- name: p9-protection
+  wave: 10
+  namespace: sa-p9
+  path: p9/protection
