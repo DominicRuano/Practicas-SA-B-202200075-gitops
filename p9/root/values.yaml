@@ -20,6 +20,8 @@ applications:
     helm:
       valuesObject:
         kyverno-api:
+          annotations:
+            practica: p9
           labels:
             practica: p9
         test:
