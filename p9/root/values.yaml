@@ -104,6 +104,11 @@ applications:
   wave: 0
   namespace: sa-p9
   path: p9/platform
+  ignoreDifferences:
+  - group: ''
+    kind: Service
+    jsonPointers:
+    - /spec/selector/rollouts-pod-template-hash
 - name: p9-protection
   wave: 10
   namespace: sa-p9

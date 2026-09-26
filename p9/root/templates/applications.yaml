@@ -9,6 +9,10 @@ metadata:
     argocd.argoproj.io/sync-wave: {{ .wave | quote }}
 spec:
   project: default
+  {{- with .ignoreDifferences }}
+  ignoreDifferences:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   source:
     {{- if .source }}
     {{- toYaml .source | nindent 4 }}
@@ -22,7 +26,12 @@ spec:
     namespace: {{ .namespace }}
   syncPolicy:
     automated: {prune: true, selfHeal: true}
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      {{- if .ignoreDifferences }}
+      - RespectIgnoreDifferences=true
+      {{- end }}
     retry:
       limit: 10
       backoff: {duration: 10s, factor: 2, maxDuration: 2m}
