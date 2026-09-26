@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: p9-volume-policies
+  namespace: velero
+  labels:
+    practica: p9
+  annotations:
+    argocd.argoproj.io/sync-wave: '-1'
+data:
+  volume-policies.yaml: |
+    version: v1
+    volumePolicies:
+      - conditions:
+          volumeTypes: [emptyDir]
+        action:
+          type: skip

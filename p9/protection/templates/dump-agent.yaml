@@ -142,6 +142,8 @@ kind: Schedule
 metadata:
   name: p9-quarter-hour
   namespace: velero
+  annotations:
+    argocd.argoproj.io/sync-wave: '1'
 spec:
   schedule: '*/15 * * * *'
   template:
@@ -151,3 +153,6 @@ spec:
     snapshotVolumes: false
     ttl: 168h0m0s
     storageLocation: default
+    resourcePolicy:
+      kind: ConfigMap
+      name: p9-volume-policies
