@@ -19,6 +19,9 @@ applications:
     targetRevision: 3.8.2
     helm:
       valuesObject:
+        kyverno-api:
+          labels:
+            practica: p9
         test:
           image:
             tag: v1.18.2
