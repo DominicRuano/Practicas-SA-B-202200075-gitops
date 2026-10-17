@@ -30,7 +30,7 @@ spec:
           securityContext: {runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000}
           containers:
             - name: traffic
-              image: ghcr.io/dominicruano/sa-p8/gateway:1.10.1
+              image: ghcr.io/dominicruano/sa-p8/gateway:1.10.1@sha256:9350c81ff8e0c77a437ac25908899b2c3c9819bb66f1ec17b74049ad8761c790
               command: [node, /scripts/traffic.mjs]
               args: ['http://gateway-canary:8080', '1800', '/tmp/evidencias']
               securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
