@@ -6,6 +6,7 @@ gateway:
     OTEL_EXPORTER_OTLP_ENDPOINT: http://p10-collector.observabilidad.svc:4318
     OTEL_TRACES_SAMPLER: always_on
     SERVICE_VERSION: 1.10.0
+    OTEL_METRICS_EXPORTER: none
   analysis:
     prometheusEnabled: true
   rollout:
@@ -29,6 +30,7 @@ solicitudes:
     OTEL_EXPORTER_OTLP_ENDPOINT: http://p10-collector.observabilidad.svc:4318
     OTEL_TRACES_SAMPLER: always_on
     SERVICE_VERSION: 1.10.0
+    OTEL_METRICS_EXPORTER: none
   analysis:
     prometheusEnabled: true
   rollout:
@@ -53,6 +55,7 @@ catalogo:
     OTEL_TRACES_SAMPLER: always_on
     SERVICE_VERSION: 1.10.0
     FAULT_DELAY_MS: '0'
+    OTEL_METRICS_EXPORTER: none
   analysis:
     prometheusEnabled: true
   rollout:
