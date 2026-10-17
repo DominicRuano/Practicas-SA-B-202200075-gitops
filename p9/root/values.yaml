@@ -271,7 +271,7 @@ applications:
                   - name: TraceID
                     matcherRegex: '"trace_id"\s*:\s*"([a-f0-9]+)"'
                     datasourceUid: tempo
-                    url: ${__value.raw}
+                    url: $${__value.raw}
               - name: Tempo
                 uid: tempo
                 type: tempo
@@ -285,7 +285,7 @@ applications:
                     filterByTraceID: false
                     customQuery: true
                     query: '{service_name=~"gateway|solicitudes|catalogo"} | json
-                      | trace_id="${__span.traceId}"'
+                      | trace_id="$${__trace.traceId}"'
                   serviceMap:
                     datasourceUid: prometheus
                   nodeGraph:
