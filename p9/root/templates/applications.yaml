@@ -20,6 +20,11 @@ spec:
     repoURL: {{ $.Values.repository | quote }}
     targetRevision: {{ $.Values.revision | quote }}
     path: {{ .path | quote }}
+    {{- with .valueFiles }}
+    helm:
+      valueFiles:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
     {{- end }}
   destination:
     server: https://kubernetes.default.svc
