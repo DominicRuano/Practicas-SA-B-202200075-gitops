@@ -205,6 +205,7 @@ applications:
               group_wait: 5s
               group_interval: 30s
               repeat_interval: 1h
+              routes: []
             receivers:
             - name: operacion
           alertmanagerSpec:
@@ -279,7 +280,9 @@ applications:
                     datasourceUid: prometheus
                   nodeGraph:
                     enabled: true
+  serverSideDiff: true
 - name: p10-observability
   wave: -10
   namespace: observabilidad
   path: p10/observability
+  serverSideDiff: true

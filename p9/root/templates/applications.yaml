@@ -7,6 +7,9 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: {{ .wave | quote }}
+    {{- if .serverSideDiff }}
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
+    {{- end }}
 spec:
   project: default
   {{- with .ignoreDifferences }}
