@@ -290,6 +290,9 @@ applications:
                     datasourceUid: prometheus
                   nodeGraph:
                     enabled: true
+          deploymentStrategy:
+            type: Recreate
+            rollingUpdate: null
   serverSideDiff: true
 - name: p10-observability
   wave: -10

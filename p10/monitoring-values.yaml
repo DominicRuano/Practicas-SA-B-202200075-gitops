@@ -162,3 +162,6 @@ grafana:
             datasourceUid: prometheus
           nodeGraph:
             enabled: true
+  deploymentStrategy:
+    type: Recreate
+    rollingUpdate: null
