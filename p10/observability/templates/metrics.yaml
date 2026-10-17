@@ -51,11 +51,11 @@ spec:
           labels: {severity: critical, practice: p10}
           annotations:
             summary: Las peticiones fallidas consumen rapidamente el presupuesto de disponibilidad
-            runbook_url: https://github.com/DominicRuano/Practicas-SA-B-202200075/blob/main/P10/docs/runbooks.md#disponibilidad
+            runbook_url: https://github.com/DominicRuano/Practica-10-SA-B-202200075/blob/main/P10/docs/runbooks.md#disponibilidad
         - alert: P10LatencyBudgetBurn
           expr: p10:latency:burnrate5m > 2 and p10:latency:burnrate1m > 2 and sum(increase(http_requests_total{service="gateway"}[1m])) >= 20
           for: 15s
           labels: {severity: warning, practice: p10}
           annotations:
             summary: La lentitud consume rapidamente el presupuesto de latencia
-            runbook_url: https://github.com/DominicRuano/Practicas-SA-B-202200075/blob/main/P10/docs/runbooks.md#latencia
+            runbook_url: https://github.com/DominicRuano/Practica-10-SA-B-202200075/blob/main/P10/docs/runbooks.md#latencia
