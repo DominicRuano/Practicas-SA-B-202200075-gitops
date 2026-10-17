@@ -98,7 +98,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (service) (rate(http_requests_total{status=~\"5..\"}[1m]))",
+          "expr": "sum by (service) (rate(http_requests_total{status=~\"5..\"}[1m])) or (0 * sum by (service) (rate(http_requests_total[1m])))",
           "legendFormat": "{{service}} {{pod}}"
         }
       ],

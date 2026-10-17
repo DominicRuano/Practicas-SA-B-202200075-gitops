@@ -51,12 +51,14 @@ async function renewSession() {
 }
 const deadline = Date.now() + seconds * 1000;
 async function worker() {
+  let iteration = 0;
   while (Date.now() < deadline) {
     const started = Date.now();
     try {
       await renewSession();
       const result = await call('/api/v1/catalogo/graphql', {query:'query { categorias { id nombre } }'});
-      await call('/api/v1/solicitudes', undefined, 200, 'GET');
+      if (iteration % 3 === 0) await call('/api/v1/solicitudes', undefined, 200, 'GET');
+      iteration += 1;
       lastTrace = result.response.headers.get('x-trace-id');
       completed += 1;
       await writeFile(`${output}/ultimo-trafico.json`, JSON.stringify({timestamp:new Date().toISOString(),trace_id:lastTrace,duration_ms:Date.now()-started}));
@@ -67,5 +69,5 @@ async function worker() {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 }
-await Promise.all(Array.from({length:4}, worker));
+await Promise.all(Array.from({length:2}, worker));
 console.log(JSON.stringify({completed,errors,seconds,trace_id:lastTrace}));
