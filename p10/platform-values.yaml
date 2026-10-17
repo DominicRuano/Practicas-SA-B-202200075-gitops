@@ -63,7 +63,7 @@ catalogo:
     maxUnavailable: 0
     promotions:
     - weight: 50
-      pause: 150s
+      pause: 240s
   resources:
     requests:
       cpu: 100m
